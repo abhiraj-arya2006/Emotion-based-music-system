@@ -21,7 +21,59 @@ const emotionIcons = {
 document.addEventListener('DOMContentLoaded', function() {
     initializeUpload();
     loadLanguages();
+    initializeTheme();
 });
+
+// Theme Toggle Functionality
+function initializeTheme() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+    const themeIcon = themeToggle.querySelector('.theme-icon');
+    
+    // Check for saved theme preference or default to light mode
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    body.classList.toggle('dark-theme', savedTheme === 'dark');
+    updateThemeIcon(savedTheme);
+    
+    // Theme toggle event
+    themeToggle.addEventListener('click', function() {
+        body.classList.toggle('dark-theme');
+        const currentTheme = body.classList.contains('dark-theme') ? 'dark' : 'light';
+        localStorage.setItem('theme', currentTheme);
+        updateThemeIcon(currentTheme);
+        
+        // Add ripple effect
+        createRipple(themeToggle, event);
+    });
+}
+
+function updateThemeIcon(theme) {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+    } else {
+        themeIcon.textContent = '🌙';
+    }
+}
+
+function createRipple(element, event) {
+    const ripple = document.createElement('span');
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    ripple.classList.add('ripple');
+    
+    element.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}
 
 // Initialize image upload
 function initializeUpload() {
@@ -39,13 +91,15 @@ function initializeUpload() {
 function handleDragOver(e) {
     e.preventDefault();
     e.stopPropagation();
-    e.currentTarget.style.background = '#f0f0ff';
+    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+    e.currentTarget.style.transform = 'scale(1.02)';
 }
 
 function handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
-    e.currentTarget.style.background = 'white';
+    e.currentTarget.style.borderColor = 'var(--glass-border)';
+    e.currentTarget.style.transform = 'scale(1)';
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
@@ -184,7 +238,7 @@ async function detectEmotion() {
     
     const detectBtn = document.getElementById('detect-btn');
     detectBtn.disabled = true;
-    detectBtn.innerHTML = '<span class="loading"></span> Detecting...';
+    detectBtn.innerHTML = '<span class="loading"></span><span>Detecting...</span>';
     
     try {
         const response = await fetch('/api/detect-and-recommend', {
@@ -205,14 +259,17 @@ async function detectEmotion() {
             displayEmotionResult(data);
             displayRecommendations(data.recommendations);
         } else {
-            alert('Error: ' + (data.error || 'Could not detect emotion'));
+            const errorMsg = data.error || 'Could not detect emotion';
+            const errorType = data.error_type ? ` (${data.error_type})` : '';
+            console.error('Emotion detection error:', data);
+            alert('Error: ' + errorMsg + errorType + '\n\nCheck the browser console (F12) for more details.');
         }
     } catch (error) {
         console.error('Error:', error);
         alert('An error occurred. Please try again.');
     } finally {
         detectBtn.disabled = false;
-        detectBtn.innerHTML = '🔍 Detect Emotion';
+        detectBtn.innerHTML = '<span class="btn-icon">🔍</span><span>Detect Emotion</span>';
     }
 }
 
@@ -252,8 +309,23 @@ function displayRecommendations(recommendations) {
     const recommendationsList = document.getElementById('recommendations-list');
     recommendationsList.innerHTML = '';
     
-    if (recommendations.length === 0) {
-        recommendationsList.innerHTML = '<p>No recommendations found. Try a different emotion or language.</p>';
+    if (!recommendations || recommendations.length === 0) {
+        recommendationsList.innerHTML = `
+            <div class="glass-card inner-glass" style="padding: 30px; text-align: center;">
+                <p style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 15px;">
+                    ⚠️ No recommendations found
+                </p>
+                <p style="color: var(--text-secondary);">
+                    This might be due to:<br>
+                    • YouTube API connection issue<br>
+                    • No videos found for this emotion/mood<br>
+                    • Network connectivity problem
+                </p>
+                <p style="color: var(--text-secondary); margin-top: 15px; font-size: 0.9rem;">
+                    Please try again or check the server console for details.
+                </p>
+            </div>
+        `;
         return;
     }
     
@@ -261,50 +333,46 @@ function displayRecommendations(recommendations) {
         const songCard = document.createElement('div');
         songCard.className = 'song-card';
         
-        // Check if this is a Spotify track
-        const isSpotify = song.spotify_url || song.spotify_id;
+        // Check if this is a YouTube video
+        const isYouTube = song.youtube_id || song.youtube_url;
         
-        // Album art or placeholder
-        const albumArt = song.album_art || 'https://via.placeholder.com/150?text=No+Image';
+        // Thumbnail or placeholder
+        const thumbnail = song.thumbnail || 'https://via.placeholder.com/150?text=No+Image';
         
         songCard.innerHTML = `
             <div class="song-number">#${index + 1}</div>
             <div class="song-album-art">
-                <img src="${albumArt}" alt="${song.song_name}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                <img src="${thumbnail}" alt="${song.song_name}" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
             </div>
             <div class="song-info">
                 <div class="song-title">${song.song_name}</div>
-                <div class="song-artist">🎤 ${song.artist}</div>
+                <div class="song-artist">🎤 ${song.artist || song.channel_title || 'Unknown Artist'}</div>
                 <div class="song-meta">
                     <span class="meta-badge badge-language">🌍 ${song.language}</span>
                     <span class="meta-badge badge-emotion">${emotionIcons[song.emotion] || ''} ${song.emotion}</span>
-                    <span class="meta-badge badge-genre">🎵 ${song.genre || 'Unknown'}</span>
+                    <span class="meta-badge badge-genre">🎵 ${song.genre || 'Music'}</span>
+                    ${song.view_count ? `<span class="meta-badge" style="background: var(--glass-bg); border: 1px solid var(--glass-border);">👁️ ${(song.view_count / 1000000).toFixed(1)}M views</span>` : ''}
                 </div>
-                ${isSpotify ? `
-                    <div class="spotify-actions">
-                        <a href="${song.spotify_url}" target="_blank" class="spotify-button">
-                            <span style="color: #1DB954;">♫</span> Open in Spotify
+                ${isYouTube ? `
+                    <div class="youtube-actions">
+                        <a href="${song.youtube_url}" target="_blank" class="youtube-button">
+                            <span style="color: #FF0000;">▶</span> Watch on YouTube
                         </a>
                     </div>
                 ` : ''}
             </div>
-            <div class="audio-player">
-                ${isSpotify && song.spotify_id ? 
+            <div class="youtube-player">
+                ${isYouTube && song.youtube_id ? 
                     `<iframe 
-                        src="https://open.spotify.com/embed/track/${song.spotify_id}?utm_source=generator&theme=0" 
+                        src="https://www.youtube.com/embed/${song.youtube_id}?rel=0&modestbranding=1" 
                         width="100%" 
-                        height="152" 
-                        frameBorder="0" 
-                        allowfullscreen="" 
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                        loading="lazy">
+                        height="315" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen
+                        style="border-radius: 12px; min-height: 315px;">
                     </iframe>` 
-                    : song.audio_path ? 
-                    `<audio controls>
-                        <source src="/${song.audio_path}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>` 
-                    : '<p style="color: #999; font-size: 0.9em;">Preview not available</p>'
+                    : '<p style="color: #999; font-size: 0.9em;">Video not available</p>'
                 }
             </div>
         `;
@@ -312,32 +380,11 @@ function displayRecommendations(recommendations) {
         recommendationsList.appendChild(songCard);
     });
     
-    // Add playlist embed if all tracks are from same playlist
-    const playlistIds = [...new Set(recommendations.filter(s => s.playlist_id).map(s => s.playlist_id))];
-    if (playlistIds.length === 1 && playlistIds[0]) {
-        const playlistEmbed = document.createElement('div');
-        playlistEmbed.className = 'playlist-embed-container';
-        playlistEmbed.innerHTML = `
-            <h3 style="margin: 20px 0 10px 0; color: #667eea;">🎵 Full Playlist</h3>
-            <iframe
-                title="Spotify Embed: Recommendation Playlist"
-                src="https://open.spotify.com/embed/playlist/${playlistIds[0]}?utm_source=generator&theme=0"
-                width="100%"
-                height="360"
-                style="min-height: 360px; border-radius: 12px;"
-                frameBorder="0"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy">
-            </iframe>
-        `;
-        recommendationsList.appendChild(playlistEmbed);
-    }
-    
-    // Add Spotify attribution
-    if (recommendations.some(s => s.spotify_url)) {
+    // Add YouTube attribution
+    if (recommendations.some(s => s.youtube_url)) {
         const attribution = document.createElement('div');
-        attribution.className = 'spotify-attribution';
-        attribution.innerHTML = '<p>Powered by <a href="https://www.spotify.com" target="_blank">Spotify</a></p>';
+        attribution.className = 'youtube-attribution';
+        attribution.innerHTML = '<p>Powered by <a href="https://www.youtube.com" target="_blank">YouTube</a> Data API v3</p>';
         recommendationsList.appendChild(attribution);
     }
 }

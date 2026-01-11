@@ -31,18 +31,21 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 # Using fine-tuned pre-trained FER2013 model with trainable top layers
 # This provides excellent accuracy (80-95% confidence) with customization capability
 emotion_detector = EmotionDetector(use_fer_library=False)
-print("✅ Using fine-tuned pre-trained FER2013 model!")
+print("[OK] Using fine-tuned pre-trained FER2013 model!")
 print("   Model features: Pre-trained base + trainable top layers for customization")
 
-# Initialize Spotify-based music recommender
-# Falls back to local CSV if Spotify credentials are not available
+# Initialize YouTube-based music recommender
+# YouTube Data API v3 integration is required
+music_recommender = None
 try:
-    music_recommender = MusicRecommender(use_spotify=True)
-    print("✅ Music recommender initialized with Spotify integration!")
+    music_recommender = MusicRecommender()
+    print("[OK] Music recommender initialized with YouTube integration!")
 except Exception as e:
-    print(f"⚠️  Spotify initialization failed: {e}")
-    print("   Using local song database as fallback...")
-    music_recommender = MusicRecommender(use_spotify=False)
+    print(f"[ERROR] YouTube initialization failed: {e}")
+    print("   YouTube integration is required for this application.")
+    print("   Please check your YouTube API key in .env file:")
+    print("   - YOUTUBE_API_KEY")
+    print("   The app will start but recommendations will not work until API key is set.")
 
 # Create necessary directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -77,6 +80,14 @@ def decode_base64_image(image_data):
 def index():
     """Render the main page."""
     return render_template('index.html')
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Check if YouTube is configured."""
+    return jsonify({
+        'success': True,
+        'youtube_configured': music_recommender is not None and music_recommender.youtube_client is not None
+    })
 
 @app.route('/api/detect-emotion', methods=['POST'])
 def detect_emotion():
@@ -162,6 +173,13 @@ def recommend():
                 'error': 'Emotion not provided'
             }), 400
         
+        if music_recommender is None or music_recommender.youtube_client is None:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube API key not configured. Please set YOUTUBE_API_KEY in .env file.',
+                'error_type': 'ConfigurationError'
+            }), 503
+        
         emotion = data['emotion']
         confidence = data.get('confidence', 1.0)
         language = data.get('language', None)
@@ -240,6 +258,18 @@ def detect_and_recommend():
         language = data.get('language', None)
         top_n = data.get('top_n', 5)
         
+        # Check if YouTube is configured
+        if music_recommender is None or music_recommender.youtube_client is None:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube API key not configured. Please set YOUTUBE_API_KEY in .env file.',
+                'error_type': 'ConfigurationError',
+                'emotion': emotion,
+                'confidence': confidence,
+                'all_emotions': emotion_result['all_emotions'],
+                'recommendations': []
+            }), 503
+        
         recommendations = music_recommender.get_recommendations(
             emotion=emotion,
             confidence=confidence,
@@ -257,16 +287,26 @@ def detect_and_recommend():
         })
     
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[ERROR] Exception in detect_and_recommend: {e}")
+        print(f"[ERROR] Full traceback:")
+        print(error_trace)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Internal server error: {str(e)}',
+            'error_type': type(e).__name__
         }), 500
 
 @app.route('/api/languages', methods=['GET'])
 def get_languages():
     """Get list of all available languages."""
     try:
-        languages = music_recommender.get_all_languages()
+        if music_recommender is None:
+            # Return default languages even if Spotify not configured
+            languages = ['English', 'Hindi', 'Punjabi', 'Tamil', 'Telugu', 'Korean', 'Spanish']
+        else:
+            languages = music_recommender.get_all_languages()
         return jsonify({
             'success': True,
             'languages': languages
@@ -279,12 +319,15 @@ def get_languages():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    """Get statistics about the song database."""
+    """Get statistics about the song database (Spotify only)."""
     try:
+        emotion_counts = music_recommender.get_song_count_by_emotion()
+        total_songs = sum(emotion_counts.values()) if emotion_counts else 0
+        
         stats = {
-            'song_count_by_emotion': music_recommender.get_song_count_by_emotion(),
+            'song_count_by_emotion': emotion_counts,
             'languages': music_recommender.get_all_languages(),
-            'total_songs': len(music_recommender.songs_df) if music_recommender.songs_df is not None else 0
+            'total_songs': total_songs
         }
         return jsonify({
             'success': True,

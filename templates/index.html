@@ -3,43 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emotion-Based Music Recommendation System</title>
+    <title>Emotion-Based Music Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="light-theme">
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="gradient-blob blob-1"></div>
+        <div class="gradient-blob blob-2"></div>
+        <div class="gradient-blob blob-3"></div>
+        <div class="particles"></div>
+        <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+            <path fill="url(#waveGradient)" fill-opacity="0.3" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            <defs>
+                <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+        </svg>
+        <!-- Music Icons -->
+        <div class="music-icon icon-1">🎵</div>
+        <div class="music-icon icon-2">🎧</div>
+        <div class="music-icon icon-3">🎶</div>
+        <div class="music-icon icon-4">🎤</div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon">🌙</span>
+    </button>
+
     <div class="container">
-        <header>
-            <h1>🎵 Emotion-Based Music Recommendation</h1>
+        <header class="glass-card header-glass">
+            <h1 class="gradient-text">Emotion-Based Music Recommendation</h1>
             <p class="subtitle">Detect your emotion and discover music that matches your mood</p>
             <p class="disclaimer">⚠️ This system recommends music, not medical advice.</p>
-            <p class="spotify-note" style="font-size: 0.85em; opacity: 0.8; margin-top: 5px;">
-                🎵 Powered by <a href="https://www.spotify.com" target="_blank" style="color: #1DB954;">Spotify</a> - Real songs, multiple languages
+            <p class="youtube-note">
+                🎵 Powered by <a href="https://www.youtube.com" target="_blank">YouTube</a> Data API v3 - Real music videos, multiple languages
             </p>
         </header>
 
         <main>
             <!-- Emotion Detection Section -->
-            <section class="detection-section">
-                <h2>1. Detect Your Emotion</h2>
+            <section class="detection-section glass-card floating-card">
+                <h2 class="section-title">1. Detect Your Emotion</h2>
                 
                 <div class="input-methods">
                     <div class="method-tabs">
-                        <button class="tab-btn active" onclick="switchTab('upload')">📁 Upload Image</button>
-                        <button class="tab-btn" onclick="switchTab('webcam')">📷 Webcam</button>
+                        <button class="tab-btn active glass-button" onclick="switchTab('upload')">
+                            <span class="tab-icon">📁</span>
+                            <span>Upload Image</span>
+                        </button>
+                        <button class="tab-btn glass-button" onclick="switchTab('webcam')">
+                            <span class="tab-icon">📷</span>
+                            <span>Webcam</span>
+                        </button>
                     </div>
 
                     <!-- Image Upload Tab -->
                     <div id="upload-tab" class="tab-content active">
-                        <div class="upload-area" id="upload-area">
+                        <div class="upload-area glass-card" id="upload-area">
                             <input type="file" id="image-input" accept="image/*" style="display: none;">
                             <div class="upload-placeholder">
-                                <p>📸 Click or drag an image here</p>
+                                <div class="upload-icon">📸</div>
+                                <p class="upload-text">Click or drag an image here</p>
                                 <p class="upload-hint">Supports: JPG, PNG, GIF (Max 5MB)</p>
                             </div>
                         </div>
-                        <div id="image-preview" class="image-preview" style="display: none;">
+                        <div id="image-preview" class="image-preview glass-card" style="display: none;">
                             <img id="preview-img" src="" alt="Preview">
-                            <button class="remove-btn" onclick="removeImage()">✕</button>
+                            <button class="remove-btn glass-button" onclick="removeImage()">✕</button>
                         </div>
                     </div>
 
@@ -48,30 +86,32 @@
                         <div class="webcam-container">
                             <video id="webcam-video" autoplay playsinline style="display: none;"></video>
                             <canvas id="webcam-canvas" style="display: none;"></canvas>
-                            <div id="webcam-placeholder" class="webcam-placeholder">
-                                <p>📷 Click to start webcam</p>
+                            <div id="webcam-placeholder" class="webcam-placeholder glass-card">
+                                <div class="webcam-icon">📷</div>
+                                <p>Click to start webcam</p>
                             </div>
                             <div class="webcam-controls">
-                                <button id="start-webcam-btn" class="btn btn-primary" onclick="startWebcam()">Start Webcam</button>
-                                <button id="capture-btn" class="btn btn-success" onclick="captureWebcam()" style="display: none;">Capture Photo</button>
-                                <button id="stop-webcam-btn" class="btn btn-danger" onclick="stopWebcam()" style="display: none;">Stop Webcam</button>
+                                <button id="start-webcam-btn" class="btn btn-primary neon-button" onclick="startWebcam()">Start Webcam</button>
+                                <button id="capture-btn" class="btn btn-success neon-button" onclick="captureWebcam()" style="display: none;">Capture Photo</button>
+                                <button id="stop-webcam-btn" class="btn btn-danger neon-button" onclick="stopWebcam()" style="display: none;">Stop Webcam</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <button id="detect-btn" class="btn btn-primary btn-large" onclick="detectEmotion()" disabled>
-                    🔍 Detect Emotion
+                <button id="detect-btn" class="btn btn-primary btn-large neon-button glow-button" onclick="detectEmotion()" disabled>
+                    <span class="btn-icon">🔍</span>
+                    <span>Detect Emotion</span>
                 </button>
             </section>
 
             <!-- Emotion Result Section -->
-            <section id="emotion-result" class="result-section" style="display: none;">
-                <h2>2. Detected Emotion</h2>
-                <div class="emotion-display">
+            <section id="emotion-result" class="result-section glass-card floating-card" style="display: none;">
+                <h2 class="section-title">2. Detected Emotion</h2>
+                <div class="emotion-display glass-card inner-glass">
                     <div class="emotion-icon" id="emotion-icon">😊</div>
                     <div class="emotion-info">
-                        <h3 id="emotion-name">Happy</h3>
+                        <h3 id="emotion-name" class="gradient-text">Happy</h3>
                         <p class="confidence">Confidence: <span id="confidence-score">85%</span></p>
                     </div>
                 </div>
@@ -79,21 +119,21 @@
             </section>
 
             <!-- Language Filter Section -->
-            <section id="language-section" class="filter-section" style="display: none;">
-                <h2>3. Choose Language (Optional)</h2>
-                <select id="language-filter" class="language-select" onchange="filterByLanguage()">
+            <section id="language-section" class="filter-section glass-card floating-card" style="display: none;">
+                <h2 class="section-title">3. Choose Language (Optional)</h2>
+                <select id="language-filter" class="language-select glass-input" onchange="filterByLanguage()">
                     <option value="">All Languages</option>
                 </select>
             </section>
 
             <!-- Recommendations Section -->
-            <section id="recommendations-section" class="recommendations-section" style="display: none;">
-                <h2>4. Recommended Songs</h2>
+            <section id="recommendations-section" class="recommendations-section glass-card floating-card" style="display: none;">
+                <h2 class="section-title">4. Recommended Songs</h2>
                 <div id="recommendations-list" class="recommendations-list"></div>
             </section>
         </main>
 
-        <footer>
+        <footer class="glass-card footer-glass">
             <p>Built with ❤️ for music lovers | Open Source</p>
         </footer>
     </div>
@@ -101,4 +141,3 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
-

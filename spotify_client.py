@@ -104,13 +104,18 @@ class SpotifyClient:
             return response.json()
             
         except requests.exceptions.RequestException as e:
-            print(f"⚠️  Spotify API request failed: {e}")
+            print(f"[ERROR] Spotify API request failed: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 try:
                     error_data = e.response.json()
-                    print(f"   Error: {error_data.get('error', {}).get('message', 'Unknown error')}")
+                    error_msg = error_data.get('error', {}).get('message', 'Unknown error')
+                    print(f"   Error message: {error_msg}")
+                    print(f"   Status code: {e.response.status_code}")
                 except:
-                    print(f"   Status: {e.response.status_code}")
+                    print(f"   Status code: {e.response.status_code}")
+                    print(f"   Response text: {e.response.text[:200]}")
+            else:
+                print(f"   Connection error - check internet connection")
             return None
     
     def search_tracks(self, query: str, genre: Optional[str] = None, 

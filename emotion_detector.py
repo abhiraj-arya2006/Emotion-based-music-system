@@ -55,23 +55,23 @@ class EmotionDetector:
                     # Create fine-tuned model with trainable top layers
                     # IMPORTANT: This keeps the original architecture, just makes top layers trainable
                     self.model = self._create_finetuned_model(base_model)
-                    print("✅ Pre-trained FER2013 model loaded and fine-tuned!")
+                    print("[OK] Pre-trained FER2013 model loaded and fine-tuned!")
                     print(f"   Model expects {self.input_size}x{self.input_size} input")
                     print("   Top layers are trainable - model ready for inference and fine-tuning")
                     return
                 except Exception as e:
-                    print(f"⚠️  Could not load FER2013 model: {e}")
+                    print(f"[WARNING] Could not load FER2013 model: {e}")
                     print("   Trying alternative model...")
             
             # Try to load the custom saved model
             if os.path.exists(self.model_path):
                 print("Loading saved custom model...")
                 self.model = keras.models.load_model(self.model_path, compile=False)
-                print("✅ Custom model loaded successfully!")
+                print("[OK] Custom model loaded successfully!")
                 return
             
             # If no pre-trained model exists, create a simple one
-            print("⚠️  No pre-trained model found!")
+            print("[WARNING] No pre-trained model found!")
             print("   For best results, download a pre-trained model:")
             print("   python download_model.py")
             print("   Creating a basic model (will need training for accuracy)...")
@@ -79,12 +79,12 @@ class EmotionDetector:
             os.makedirs('models', exist_ok=True)
             try:
                 self.model.save(self.model_path)
-                print("✅ Basic model created. For accurate predictions, use a pre-trained model.")
+                print("[OK] Basic model created. For accurate predictions, use a pre-trained model.")
             except Exception as save_error:
-                print(f"⚠️  Could not save model: {save_error}")
+                print(f"[WARNING] Could not save model: {save_error}")
                 
         except Exception as e:
-            print(f"❌ Error loading model: {e}")
+            print(f"[ERROR] Error loading model: {e}")
             print("Creating fallback model...")
             self.model = self._create_improved_model()
     
